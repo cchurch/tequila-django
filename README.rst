@@ -131,7 +131,7 @@ The following variables are used by the ``tequila-django`` role:
 - ``log_dir`` **default:** ``"{{ root_dir }}/log"``
 - ``repo`` **required:** dict containing url and branch
 - ``source_is_local`` **default:** ``false``
-- ``github_deploy_key`` **required if source_is_local is false**
+- ``github_deploy_key`` **required if source_is_local is false** (unless using SSH agent forwarding)
 - ``local_project_dir`` **required if source_is_local**
 - ``extra_env`` **default:** empty dict
 - ``project_subdir`` **default:** ``""`` - if a project's main source
