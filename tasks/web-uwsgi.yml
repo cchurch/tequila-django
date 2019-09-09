@@ -1,37 +1,44 @@
 ---
-- name: install gunicorn
+
+- name: remove uwsgi system package
+  apt:
+    pkg: uwsgi
+    state: absent
+
+- name: install uwsgi
   pip:
-    name: gunicorn
+    name: uwsgi
     state: present
-    version: "{{ gunicorn_version|default(omit) }}"
+    version: "{{ uwsgi_version|default(omit) }}"
     virtualenv: "{{ venv_dir }}"
     virtualenv_python: /usr/bin/python{{ python_version }}
   become_user: "{{ project_user }}"
   vars:
     ansible_ssh_pipelining: true
 
-- name: configure gunicorn
+- name: configure uwsgi ini
   template:
-    src: gunicorn.conf
-    dest: /etc/supervisor/conf.d/{{ project_name }}-gunicorn.conf
-    owner: root
-    group: root
-    mode: 0600
-
-- name: ensure gunicorn is present
-  supervisorctl:
-    name: "{{ project_name }}-server"
-    state: present
-
-# TODO: let connections to the {{ project_port }} through the firewall if we are load-balancing.
-
-- name: copy shell script wrapper for manage.py
-  template:
-    src: manage.sh
-    dest: "{{ root_dir }}/manage.sh"
+    src: uwsgi.ini.j2
+    dest: "{{ uwsgi_ini_path }}"
     owner: "{{ project_user }}"
     group: "{{ project_user }}"
-    mode: 0700
+    mode: 0644
+
+- name: configure uwsgi service
+  template:
+    src: uwsgi.service.j2
+    dest: /etc/systemd/system/{{ project_name }}-uwsgi.service
+    owner: root
+    group: root
+    mode: 0644
+
+- name: ensure uwsgi is enabled
+  systemd:
+    name: "{{ project_name }}-uwsgi.service"
+    enabled: true
+    daemon_reload: true
+
+# TODO: let connections to the {{ project_port }} through the firewall if we are load-balancing.
 
 # Use manage.sh so we use the same env vars from .env that we use on
 # other invocations of django manage.py. Unfortunately that means we cannot
@@ -47,15 +54,10 @@
   vars:
     ansible_ssh_pipelining: true
 
-- name: restart gunicorn
-  supervisorctl:
-    name: "{{ project_name }}-server"
+- name: restart uwsgi
+  systemd:
+    name: "{{ project_name }}-uwsgi.service"
     state: restarted
-  # If your program isn't running, telling supervisorctl to restart
-  # it is an error. I would think that the Ansible module would
-  # handle that, since they're supposed to be idempotent.
-  # For now, just ignore errors:
-  ignore_errors: true
 
 # Note: we want the collectstatic step to happen at the very end of
 # the roles section for the current playbook, so that it'll still
