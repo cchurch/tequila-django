@@ -13,7 +13,7 @@ http                = :{{ project_port }}
 socket              = /tmp/{{ project_name }}.sock
 chmod-socket        = 664
 
-chdir               = "{{ source_dir }}"
-module              = "{{ wsgi_module }}"
+chdir               = {{ source_dir }}
+module              = {{ wsgi_module }}
 
 {{ uwsgi_extra_ini_settings | default('') }}
